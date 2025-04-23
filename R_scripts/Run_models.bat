@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 
 :: Ruta del ejecutable Rscript y scripts
-set "rutaR=C:/Program Files/R/R-4.3.3/bin"
+set "rutaR=C:/Program Files/R/R-4.4.3/bin"
 set "script=C:/SCIENCE/2025_UGR_Acebuche/R_scripts/SDMs.R"
 set "output=C:/SCIENCE/2025_UGR_Acebuche/SDM_output"
 
