@@ -13,7 +13,7 @@ library(usdm)
 tmp <- Sys.time()
 
 # define the output directory
-output_dir <- file.path("./SDM_output")
+output_dir <- file.path("C:/SCIENCE/2025_UGR_Acebuche/SDM_output")
 
 # create output directory if it does not exist.
 if (!dir.exists(output_dir)) {
