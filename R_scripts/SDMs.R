@@ -94,8 +94,8 @@ myBiomodData
 cv.k <- bm_CrossValidation(
   bm.format = myBiomodData,
   strategy = "kfold",
-  nb.rep = 1,
-  k = 10
+  nb.rep = 5,
+  k = 4
 )
 
 # Specify the models to be run
@@ -151,6 +151,8 @@ write.csv(single_eval, file.path(output_dir, "single_eval.csv"), row.names = F)
 write.csv(single_varimp, file.path(output_dir, "single_varimp.csv"), row.names = F)
 
 # Ensemble models
+
+
 myBiomodEM <- BIOMOD_EnsembleModeling(
   bm.mod = myBiomodModelOut,
   models.chosen = "all",
@@ -192,8 +194,8 @@ myBiomodEMProj <- BIOMOD_EnsembleForecasting(
   bm.proj = myBiomodProj,
   proj.name = "Current_EM",
   models.chosen = "all",
-  metric.binary = "BOYCE",
-  metric.filter = "BOYCE",
+  metric.binary = "all",
+  metric.filter = "all",
   on_0_1000 = FALSE,
   nb.cpu = 8,
   na.rm = FALSE
@@ -204,53 +206,45 @@ myBiomodEMProj
 
 
 #### 7.- Project onto future conditions ####
+scenarios <- c("245", "370", "585") # RCP scenarios
+years <- c("2060", "2080") # years to project
 
-##
-## This is an example
-## This code is not going to work as is
-## We need to adapt this code to your specific case
-## 
 
-# # Read the future environmental data
-# years <- c("2050", "2070")
-# models <- c("CCSM4", "GFDL-ESM2M", "HadGEM2-ES", "MIROC5")
-# scenarios <- c("rcp26", "rcp45", "rcp85")
-# 
-# 
-# for (year in years) {
-#   for (scenario in scenarios) {
-#     for (model in models) {
-#       predictor_list_future <- list.files("../data/spatial_predictors_future/", pattern = ".asc$", full.names = T)
-#       myExplFuture <- rast(predictor_list_future)
-# 
-#       # Project onto future conditions
-#       myBiomodProjectionFuture <- BIOMOD_Projection(
-#         bm.mod = myBiomodModelOut,
-#         proj.name = paste0(year, "_", model, "_", scenario),
-#         new.env = myExplFuture,
-#         models.chosen = "all",
-#         metric.binary = "all",
-#         metric.filter = "all",
-#         build.clamping.mask = TRUE
-#       )
-# 
-#       # Project ensemble models
-#       myBiomodEMProj <- BIOMOD_EnsembleForecasting(
-#         bm.em = myBiomodEM,
-#         bm.proj = myBiomodProjectionFuture,
-#         proj.name = paste0(year, "_", model, "_", scenario, "_EM"),
-#         models.chosen = "all",
-#         metric.binary = "BOYCE",
-#         metric.filter = "BOYCE",
-#         on_0_1000 = FALSE,
-#         nb.cpu = 8,
-#         na.rm = FALSE
-#       )
-# 
-#       myBiomodEMProj
-#     }
-#   }
-# }
+for (year in years) {
+  for (scenario in scenarios) {
+    # read climate projections and correct names to match rasStack_1
+    list.climProj <- list.files(file.path("../data/spatial_predictors_CMMC-ESM2", paste(year, scenario, sep = "_")), pattern = ".tif$", full.names = T, recursive = T)
+    climproj <- rast(c(list.climProj))
+    names(climproj) <- str_split_i(names(climproj), "_", 1)
+    
+    # Create the stack to predict
+    myExplFuture <- climproj
+    
+    # Select only the layers that were included in rasStack_1
+    myExplFuture <- subset(myExplFuture, names(rasStack_1))
+    
+    # Project onto future conditions
+    myBiomodProjectionFuture <- BIOMOD_Projection(bm.mod = myBiomodModelOut,
+                                                  proj.name = paste0(year, "_", scenario),
+                                                  new.env = myExplFuture,
+                                                  models.chosen = 'all',
+                                                  metric.binary = 'BOYCE',
+                                                  metric.filter = 'BOYCE',
+                                                  build.clamping.mask = TRUE)
+    
+    # Project ensemble models
+    myBiomodEMProjectionFuture <- BIOMOD_EnsembleForecasting(bm.em = myBiomodEM,
+                                                             bm.proj = myBiomodProjectionFuture,
+                                                             proj.name = paste0(year, "_", scenario, "_EM"),
+                                                             models.chosen = 'all',
+                                                             metric.binary = 'BOYCE',
+                                                             metric.filter = 'BOYCE',
+                                                             on_0_1000 = FALSE,
+                                                             nb.cpu = 8,
+                                                             na.rm = FALSE
+    )
+  }
+}
 
 # End time
 Sys.time() - tmp
