@@ -1,0 +1,206 @@
+---
+title: "Resultados de la modelización del acebuche"
+author: "José Carlos"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    css: styles.css
+    toc: yes
+    toc_float: yes
+    number_sections: yes
+    theme: simplex
+    highlight: tango
+    df_print: kable
+    code_folding: "hide"
+    keep_md: no
+  pdf_document:
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+# Packages
+library(terra)
+library(tidyterra)
+library(sf)
+library(tidyverse)
+library(leaflet)
+```
+
+
+```{r functions, echo=FALSE, message=FALSE, warning=FALSE}
+leaflet_map <- function(BOYCEfilter = FALSE) {
+  cutoff_threshold <- read.csv(paste0("C:/SCIENCE/2025_UGR_Acebuche/SDM_output/single_eval.csv")) %>%
+    filter(validation >= 0.7) %>%
+    select(cutoff) %>% 
+    summarise(cutoff = median(cutoff))
+  cutoff_threshold<- cutoff_threshold[[1]]/1000
+  
+  
+  presences <- read.csv("../data/presences/maxent oleaster 2-24.csv") %>%
+  st_as_sf(coords = c("Long", "Lat"), crs = 4326) %>%
+  mutate(olive = 1) %>%
+  select(olive)
+
+  sdm_current <- rast("C:/SCIENCE/2025_UGR_Acebuche/SDM_output/olive/proj_Current_EM/proj_Current_EM_olive_ensemble_BOYCEfilt.tif") / 1000
+  names(sdm_current) <- "Current"
+  sdm_current <- sdm_current %>%
+    terra::project("EPSG:4326")
+  
+  sdm_2060_245 <- rast("C:/SCIENCE/2025_UGR_Acebuche/SDM_output/olive/proj_2060_245_EM/proj_2060_245_EM_olive_ensemble_BOYCEfilt.tif") / 1000
+  names(sdm_2060_245) <- "2060-SSP2-4.5"
+  sdm_2060_245 <- sdm_2060_245 %>%
+    terra::project("EPSG:4326")
+  
+  sdm_2060_370 <- rast("C:/SCIENCE/2025_UGR_Acebuche/SDM_output/olive/proj_2060_370_EM/proj_2060_370_EM_olive_ensemble_BOYCEfilt.tif") / 1000
+  names(sdm_2060_370) <- "2060-SSP3-7.0"
+  sdm_2060_370 <- sdm_2060_370 %>%
+    terra::project("EPSG:4326")
+  
+  sdm_2060_585 <- rast("C:/SCIENCE/2025_UGR_Acebuche/SDM_output/olive/proj_2060_585_EM/proj_2060_585_EM_olive_ensemble_BOYCEfilt.tif") / 1000
+  names(sdm_2060_585) <- "2060-SSP5-8.5"
+  sdm_2060_585 <- sdm_2060_585 %>%
+    terra::project("EPSG:4326")
+  
+  sdm_2080_245 <- rast("C:/SCIENCE/2025_UGR_Acebuche/SDM_output/olive/proj_2080_245_EM/proj_2080_245_EM_olive_ensemble_BOYCEfilt.tif") / 1000
+  names(sdm_2080_245) <- "2080-SSP2-4.5"
+  sdm_2080_245 <- sdm_2080_245 %>%
+    terra::project("EPSG:4326")
+  
+  sdm_2080_370 <- rast("C:/SCIENCE/2025_UGR_Acebuche/SDM_output/olive/proj_2080_370_EM/proj_2080_370_EM_olive_ensemble_BOYCEfilt.tif") / 1000
+  names(sdm_2080_370) <- "2080-SSP3-7.0"
+  sdm_2080_370 <- sdm_2080_370 %>%
+    terra::project("EPSG:4326")
+  
+  sdm_2080_585 <- rast("C:/SCIENCE/2025_UGR_Acebuche/SDM_output/olive/proj_2080_585_EM/proj_2080_585_EM_olive_ensemble_BOYCEfilt.tif") / 1000
+  names(sdm_2080_585) <- "2080-SSP5-8.5"
+  sdm_2080_585 <- sdm_2080_585 %>%
+    terra::project("EPSG:4326")
+  
+  if(BOYCEfilter == TRUE) {
+    sdm_current[sdm_current < cutoff_threshold] <- 0
+    sdm_2060_245[sdm_2060_245 < cutoff_threshold] <- 0
+    sdm_2060_370[sdm_2060_370 < cutoff_threshold] <- 0
+    sdm_2060_585[sdm_2060_585 < cutoff_threshold] <- 0
+    sdm_2080_245[sdm_2080_245 < cutoff_threshold] <- 0
+    sdm_2080_370[sdm_2080_370 < cutoff_threshold] <- 0
+    sdm_2080_585[sdm_2080_585 < cutoff_threshold] <- 0
+  }
+  
+  # Crear paleta para capas con rango [0, 1] (mean, median, wmean)
+  pal_01 <- colorNumeric(
+    palette = "Spectral",
+    domain = c(0, 1),
+    na.color = "transparent",
+    reverse = TRUE
+  )
+
+  # Crear el mapa leaflet
+  map <- leaflet() %>%
+    addTiles()
+
+  map <- map %>%
+    addRasterImage(
+      sdm_current,
+      colors = pal_01,
+      opacity = 1,
+      group = names(sdm_current),
+    )
+
+  map <- map %>%
+    addRasterImage(
+      sdm_2060_245,
+      colors = pal_01,
+      opacity = 1,
+      group = names(sdm_2060_245),
+    )
+
+  map <- map %>%
+    addRasterImage(
+      sdm_2060_370,
+      colors = pal_01,
+      opacity = 1,
+      group = names(sdm_2060_370),
+    )
+
+  map <- map %>%
+    addRasterImage(
+      sdm_2060_585,
+      colors = pal_01,
+      opacity = 1,
+      group = names(sdm_2060_585),
+    )
+  
+    map <- map %>%
+    addRasterImage(
+      sdm_2080_245,
+      colors = pal_01,
+      opacity = 1,
+      group = names(sdm_2080_245),
+    )
+
+  map <- map %>%
+    addRasterImage(
+      sdm_2080_370,
+      colors = pal_01,
+      opacity = 1,
+      group = names(sdm_2080_370),
+    )
+
+  map <- map %>%
+    addRasterImage(
+      sdm_2080_585,
+      colors = pal_01,
+      opacity = 1,
+      group = names(sdm_2080_585),
+    )
+  
+
+  map <- map %>%
+    addLegend(
+      pal = pal_01,
+      values = c(0, 1),
+      position = "bottomleft",
+      title = "Habitat Suitability"
+    )
+
+
+  # Agregar puntos de presencia
+  map <- map %>%
+    addCircleMarkers(
+      data = presences,
+      radius = 1,
+      color = "black",
+      fill = TRUE,
+      fillOpacity = 0.5,
+      group = "Presences"
+    )
+
+
+  # Agregar control de capas
+  map <- map %>%
+    addLayersControl(
+      overlayGroups = c(names(sdm_current), names(sdm_2060_245), names(sdm_2060_370), names(sdm_2060_585),
+                        names(sdm_2080_245), names(sdm_2080_370), names(sdm_2080_585), "Presences"),
+      options = layersControlOptions(collapsed = FALSE)
+    )
+
+
+  # Devolver el mapa
+  map
+}
+```
+
+
+
+# Without BOYCE filter
+
+```{r no_filtering, echo=FALSE, message=FALSE, warning=FALSE, out.width = "100%"}
+leaflet_map(BOYCEfilter = FALSE)
+```
+
+# With BOYCE filter
+
+```{r filtered, echo=FALSE, message=FALSE, warning=FALSE, out.width = "100%"}
+leaflet_map(BOYCEfilter = TRUE)
+```
